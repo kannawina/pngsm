@@ -1,5 +1,6 @@
 use crate::chunk_type::ChunkType;
 use crate::Error;
+
 use crc::{Crc, *};
 use std::fmt;
 use thiserror::Error;
@@ -43,7 +44,15 @@ impl Chunk {
     }
 
     pub fn data_as_string(&self) -> crate::Result<String> {
-        Ok(self.data.iter().map(|x| *x as char).collect::<String>())
+        self.data.iter().try_fold(String::new(), |mut acc, c| {
+            let char = *c as char;
+            if char.is_ascii_graphic() || char.is_ascii_whitespace() {
+                acc.push(char);
+                Ok(acc)
+            } else {
+                Err("Not a readable char".into())
+            }
+        })
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
