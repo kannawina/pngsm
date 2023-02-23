@@ -121,6 +121,7 @@ impl RemoveCommand {
         let mut png = open_png(&self.path)?;
 
         png.remove_chunk(&self.chung_type)?;
+        std::fs::write(&self.path, png.as_bytes())?;
         Ok(())
     }
 }
@@ -130,7 +131,10 @@ impl PrintCommand {
         let png = open_png(&self.path)?;
 
         for chunk in png.chunks() {
-            println!("{}: {}", chunk.chunk_type(), chunk.data_as_string()?);
+            if let Ok(message) = chunk.data_as_string() {
+                println!("chunk type : {}\nmessage : {}", chunk.chunk_type(), message);
+                println!();
+            }
         }
 
         Ok(())
