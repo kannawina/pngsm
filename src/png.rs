@@ -63,7 +63,6 @@ impl Png {
 impl TryFrom<&[u8]> for Png {
     type Error = Error;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        println!("is executed value len: {}", value.len());
         let (png_header, value) = value.split_at(Self::HEADER_LEN);
         if Self::STANDARD_HEADER != png_header {
             return Err(Box::new(PngError::WrongHeader));

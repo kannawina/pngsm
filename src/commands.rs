@@ -87,6 +87,15 @@ impl EncodeCommand {
         let mut png = open_png(&self.path)?;
 
         let chunk_type = ChunkType::from_str(&self.chunk_type)?;
+
+        if !chunk_type.is_valid() {
+            return Err(format!(
+                "invalid chunk type of {}. the third character must be uppercase",
+                chunk_type
+            )
+            .into());
+        }
+
         let chunk = Chunk::new(chunk_type, (&self.message).clone().into_bytes());
 
         png.append_chunk(chunk);
@@ -130,6 +139,7 @@ impl PrintCommand {
     fn handle(&self) -> Result<()> {
         let png = open_png(&self.path)?;
 
+        println!();
         for chunk in png.chunks() {
             if let Ok(message) = chunk.data_as_string() {
                 println!("chunk type : {}\nmessage : {}", chunk.chunk_type(), message);
