@@ -1,5 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -112,14 +113,17 @@ impl EncodeCommand {
 impl DecodeCommand {
     fn handle(&self) -> Result<()> {
         let png = open_png(&self.path)?;
-        let chunk = png.chunk_by_type(&self.chunk_type);
-        match chunk {
-            Some(x) => {
-                println!("{}", x.data_as_string()?);
+        match png.chunk_by_type(&self.chunk_type) {
+            Some(chunks) => {
+                for chunk in chunks {
+                    println!(
+                        "chunk type : {}\nmessage : {}\n",
+                        chunk.chunk_type(),
+                        chunk.data_as_string()?
+                    );
+                }
             }
-            None => {
-                println!("Chunk Type Not Found!");
-            }
+            None => println!("No chunk that have chunk type of {}", self.chunk_type),
         }
         Ok(())
     }
@@ -129,7 +133,55 @@ impl RemoveCommand {
     fn handle(&self) -> Result<()> {
         let mut png = open_png(&self.path)?;
 
-        png.remove_chunk(&self.chung_type)?;
+        let mut chunks: Vec<Chunk> = Vec::new();
+
+        while let Ok(chunk) = png.remove_chunk(&self.chung_type) {
+            chunks.push(chunk);
+        }
+
+        if chunks.len() < 2 {
+            return Ok(());
+        }
+
+        for (index, chunk) in chunks.iter().enumerate() {
+            println!(
+                "chunk : {}\nchunk type : {}\nmessage : {}",
+                index,
+                chunk.chunk_type(),
+                chunk.data_as_string()?
+            );
+        }
+
+        print!(
+            "chose chunk to remove (0-{}, default = 0) :",
+            chunks.len() - 1
+        );
+        std::io::stdout().flush()?;
+
+        let mut user_input = String::new();
+
+        std::io::stdin().read_line(&mut user_input)?;
+
+        let user_input = user_input.trim();
+
+        if user_input.len() == 0 {
+            for chunk in chunks.into_iter().skip(1) {
+                png.append_chunk(chunk);
+            }
+        } else {
+            let remove_index = user_input.parse::<usize>()?;
+            if remove_index > chunks.len() - 1 {
+                return Err("it's bigger than displayd chunks len".into());
+            }
+
+            for (index, chunk) in chunks.into_iter().enumerate() {
+                if index == remove_index {
+                    continue;
+                }
+                png.append_chunk(chunk);
+            }
+        }
+
         std::fs::write(&self.path, png.as_bytes())?;
         Ok(())
     }

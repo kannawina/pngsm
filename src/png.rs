@@ -25,7 +25,7 @@ impl Png {
         Self { chunks }
     }
     pub fn append_chunk(&mut self, chunk: Chunk) {
-        self.chunks.push(chunk);
+        self.chunks.insert(self.chunks.len() - 1, chunk);
     }
     pub fn remove_chunk(&mut self, chunk_type: &str) -> crate::Result<Chunk> {
         let ct = ChunkType::from_str(chunk_type)?;
@@ -41,12 +41,21 @@ impl Png {
         &self.chunks
     }
 
-    pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
+    pub fn chunk_by_type(&self, chunk_type: &str) -> Option<Vec<&Chunk>> {
         let ct = ChunkType::from_str(chunk_type);
         if let Ok(ref chunk_type) = ct {
-            self.chunks.iter().find(|x| x.chunk_type() == chunk_type)
+            let chunks: Vec<&Chunk> = self
+                .chunks
+                .iter()
+                .filter(|x| x.chunk_type() == chunk_type)
+                .collect();
+            if chunks.len() == 0 {
+                return None;
+            } else {
+                return Some(chunks);
+            }
         } else {
-            None
+            return None;
         }
     }
 
