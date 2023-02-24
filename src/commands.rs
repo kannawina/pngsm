@@ -12,6 +12,9 @@ use crate::Result;
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct PngsmCommand {
+    /// png file
+    #[arg(value_name = "FILE")]
+    path: PathBuf,
     #[command(subcommand)]
     pub subcommand: SubC,
 }
@@ -30,9 +33,6 @@ pub enum SubC {
 
 #[derive(Debug, Args)]
 pub struct EncodeCommand {
-    /// png file that you want to encode
-    #[arg(value_name = "FILE")]
-    path: PathBuf,
     /// chunk type for your secret massage
     chunk_type: String,
     /// the massage you want to add to the chunk type
@@ -44,36 +44,26 @@ pub struct EncodeCommand {
 
 #[derive(Debug, Args)]
 pub struct DecodeCommand {
-    /// png file that you want to decode
-    #[arg(value_name = "FILE")]
-    path: PathBuf,
     /// chunk_type that you want to view
     chunk_type: String,
 }
 
 #[derive(Debug, Args)]
 pub struct RemoveCommand {
-    /// png file that you want to remove the massage of
-    #[arg(value_name = "FILE")]
-    path: PathBuf,
     /// the chunk_type that you want to remove
     chung_type: String,
 }
 
 #[derive(Debug, Args)]
-pub struct PrintCommand {
-    /// png file that you want to print
-    #[arg(value_name = "FILE")]
-    path: PathBuf,
-}
+pub struct PrintCommand {}
 
 impl PngsmCommand {
     pub fn handle(&self) -> Result<()> {
         match &self.subcommand {
-            SubC::Encode(ec) => ec.handle(),
-            SubC::Decode(dc) => dc.handle(),
-            SubC::Remove(rm) => rm.handle(),
-            SubC::Print(pr) => pr.handle(),
+            SubC::Encode(ec) => ec.handle(&self.path),
+            SubC::Decode(dc) => dc.handle(&self.path),
+            SubC::Remove(rm) => rm.handle(&self.path),
+            SubC::Print(pr) => pr.handle(&self.path),
         }
     }
 }
@@ -84,8 +74,8 @@ fn open_png(path: &PathBuf) -> Result<Png> {
 }
 
 impl EncodeCommand {
-    fn handle(&self) -> Result<()> {
-        let mut png = open_png(&self.path)?;
+    fn handle(&self, path: &PathBuf) -> Result<()> {
+        let mut png = open_png(path)?;
 
         let chunk_type = ChunkType::from_str(&self.chunk_type)?;
 
@@ -105,14 +95,14 @@ impl EncodeCommand {
             println!("{}", self.message);
         }
 
-        std::fs::write(&self.path, png.as_bytes())?;
+        std::fs::write(path, png.as_bytes())?;
         Ok(())
     }
 }
 
 impl DecodeCommand {
-    fn handle(&self) -> Result<()> {
-        let png = open_png(&self.path)?;
+    fn handle(&self, path: &PathBuf) -> Result<()> {
+        let png = open_png(path)?;
         match png.chunk_by_type(&self.chunk_type) {
             Some(chunks) => {
                 for chunk in chunks {
@@ -130,8 +120,8 @@ impl DecodeCommand {
 }
 
 impl RemoveCommand {
-    fn handle(&self) -> Result<()> {
-        let mut png = open_png(&self.path)?;
+    fn handle(&self, path: &PathBuf) -> Result<()> {
+        let mut png = open_png(path)?;
 
         let mut chunks: Vec<Chunk> = Vec::new();
 
@@ -182,14 +172,14 @@ impl RemoveCommand {
             }
         }
 
-        std::fs::write(&self.path, png.as_bytes())?;
+        std::fs::write(path, png.as_bytes())?;
         Ok(())
     }
 }
 
 impl PrintCommand {
-    fn handle(&self) -> Result<()> {
-        let png = open_png(&self.path)?;
+    fn handle(&self, path: &PathBuf) -> Result<()> {
+        let png = open_png(path)?;
 
         println!();
         for chunk in png.chunks() {
